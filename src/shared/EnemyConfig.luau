@@ -49,10 +49,10 @@ EnemyConfig.Enemies = {
 } :: { [string]: EnemyDef }
 
 EnemyConfig.Director = {
-	firstDelay = 10, -- detik sebelum gelombang pertama
-	interval = 18, -- detik antar kelompok
-	groupMin = 5,
-	groupMax = 9,
+	firstDelay = 15, -- detik sebelum gelombang pertama
+	interval = 25, -- detik antar kelompok
+	groupMin = 3,
+	groupMax = 5,
 	maxAlive = 40, -- batas musuh hidup bersamaan (menjaga performa)
 	spawnDistanceMin = 70, -- dari titik tengah para pemain (stud)
 	spawnDistanceMax = 100,

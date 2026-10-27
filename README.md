@@ -4,7 +4,7 @@ Game co-op 4 pemain bertema sci-fi militer serius: terjun ke planet musuh, seles
 
 ## Status
 
-- [x] 1. Sistem input sinyal bantuan (Ctrl + kombinasi panah + lempar penanda)
+- [x] 1. Sistem sinyal bantuan lewat radio (menu + bidikan kamera atas)
 - [x] 2. Serangan orbital dan paket logistik
 - [x] 3. Musuh gerombolan (alien dan mesin) dan senapan dasar
 - [ ] 4. Misi dan evakuasi
@@ -27,7 +27,7 @@ Buka Roblox Studio, buat place kosong (Baseplate), lalu sambungkan lewat plugin 
 | `src/shared/StratagemConfig.luau` | ModuleScript, nama `StratagemConfig` | `ReplicatedStorage` > folder `Shared` |
 | `src/server/StratagemHandlers.luau` | ModuleScript, nama `StratagemHandlers` | `ServerScriptService` > folder `Server` |
 | `src/server/StratagemService.server.luau` | Script, nama `StratagemService` | `ServerScriptService` > folder `Server` |
-| `src/client/StratagemInput.client.luau` | LocalScript, nama `StratagemInput` | `StarterPlayer` > `StarterPlayerScripts` > folder `Client` |
+| `src/client/RadioInput.client.luau` | LocalScript, nama `RadioInput` | `StarterPlayer` > `StarterPlayerScripts` > folder `Client` |
 | `src/shared/EnemyConfig.luau` | ModuleScript, nama `EnemyConfig` | `ReplicatedStorage` > `Shared` |
 | `src/shared/WeaponConfig.luau` | ModuleScript, nama `WeaponConfig` | `ReplicatedStorage` > `Shared` |
 | `src/server/EnemyService.luau` | ModuleScript, nama `EnemyService` | `ServerScriptService` > `Server` |
@@ -39,34 +39,30 @@ Nama folder dan script harus sama persis, karena script saling `require` lewat p
 
 ## Cara main
 
-1. Tahan **Ctrl kiri**. Panel sinyal muncul, WASD tidak menggerakkan karakter selama Ctrl ditahan.
-2. Ketik kombinasi dengan panah atau WASD. Langkah yang benar menyala kuning; salah satu langkah berarti mulai ulang.
-3. Setelah kombinasi lengkap, sinyal siap. Klik kiri untuk melempar penanda ke tanah (X atau Esc membatalkan).
-4. Penanda menyala di tanah. Beberapa detik kemudian bantuan tiba:
+1. Tekan **Q** (atau tombol **RADIO** di kiri bawah) untuk membuka radio. Pilih bantuan dengan klik atau tombol **1**-**3**. Bantuan yang sedang kooldaun berwarna abu-abu.
+2. Kamera naik ke tampilan atas. Gerakkan kursor untuk membidik; lingkaran berwarna menunjukkan area efek, dan bidikan dibatasi sejauh 110 stud dari karakter.
+3. **Klik kiri** (atau tombol **PANGGIL**) untuk memanggil. **Klik kanan**, **Q**, **X**, atau tombol **BATAL** untuk membatalkan.
+4. Kamera turun lagi dan penanda menyala di sasaran. Beberapa detik kemudian bantuan tiba:
    - **Serangan Orbital**: 6 ledakan beruntun di dalam lingkaran merah. **Friendly fire aktif**, termasuk untukmu sendiri; kerusakan 120 di pusat, turun ke 20 di tepi ledakan.
-   - **Paket Logistik**: peti jatuh dari langit. Tahan E di dekatnya untuk mengisi amunisi (attribute `Ammo` pada Player, terlihat di Explorer). Tiap pemain sekali per peti, peti habis setelah 4 pengambilan atau 60 detik.
+   - **Paket Logistik**: peti jatuh dari langit. Tahan E di dekatnya untuk mengisi amunisi (attribute `Ammo` pada Player). Tiap pemain sekali per peti, peti habis setelah 4 pengambilan atau 60 detik.
    - **Penerjunan Pasukan**: masih tiang cahaya placeholder (langkah 5).
 
-| Sinyal | Kombinasi |
-| --- | --- |
-| Serangan Orbital | ↑ → → ↓ |
-| Paket Logistik | ↓ ← ↓ ↑ |
-| Penerjunan Pasukan | ← ↑ ↓ → ↑ |
+Game **tidak berhenti** saat kamu membidik: karakter tetap diam di tempat dan musuh tetap menyerang. Cari tempat aman sebelum memanggil.
 
-Semua nama, kombinasi, kooldaun, dan warna ada di `src/shared/StratagemConfig.luau`.
+Nama, kooldaun, warna, dan ucapan radio ada di `src/shared/StratagemConfig.luau`.
 
 ## Senjata dan musuh
 
-- **Senapan Standar**: tahan klik kiri untuk menembak ke arah kursor (25 damage per peluru, 8 tembakan per detik, 1 amunisi per peluru). Amunisi tampil di pojok kanan bawah; isi ulang dengan Paket Logistik. Peluru juga melukai rekan setim.
-- Selama Ctrl ditahan atau penanda sedang siap dilempar, klik tidak menembak.
-- **Pemburu Kawanan** (alien): cepat, 40 HP, datang dalam kelompok besar.
+- **Senapan Standar**: tahan klik kiri untuk menembak ke arah kursor (25 damage per peluru, 8 tembakan per detik, 1 amunisi per peluru). Amunisi (maks. 300) tampil di pojok kanan bawah; isi ulang dengan Paket Logistik. Peluru juga melukai rekan setim.
+- Selama radio terbuka atau sedang membidik, klik tidak menembak.
+- **Pemburu Kawanan** (alien): cepat, 40 HP, datang berkelompok.
 - **Unit Penjaga** (mesin): lambat, 120 HP, pukulan keras.
-- Kelompok muncul tiap 18 detik di jarak 70-100 stud dari pemain, mulai 10 detik setelah game dimulai, maksimal 40 musuh hidup sekaligus. Semua angka ada di `EnemyConfig.luau` dan `WeaponConfig.luau`.
+- Kelompok 3-5 musuh muncul tiap 25 detik di jarak 70-100 stud dari pemain, mulai 15 detik setelah game dimulai, maksimal 40 musuh hidup sekaligus. Semua angka ada di `EnemyConfig.luau` dan `WeaponConfig.luau`.
 - Serangan Orbital juga melukai musuh.
 
 ## Catatan teknis
 
 - Musuh belum punya pathfinding: mereka berjalan lurus ke pemain terdekat dan melompat kalau tersangkut. Cocok untuk map terbuka; map dengan dinding dan bangunan butuh `PathfindingService`.
 
-- Server tidak mempercayai client: ia memeriksa id sinyal, kooldaun, jarak lempar (`MAX_THROW_DISTANCE`), dan apakah pemain masih hidup.
-- Baru mendukung keyboard + mouse. Mobile dan gamepad belum.
+- Server tidak mempercayai client: ia memeriksa id sinyal, kooldaun, jarak sasaran (`MAX_THROW_DISTANCE`), dan apakah pemain masih hidup.
+- Radio sudah punya tombol layar untuk sentuhan (ketuk peta untuk membidik, lalu PANGGIL), tapi belum dites di HP. Menembak baru mendukung mouse; gamepad belum.
