@@ -21,6 +21,39 @@ resultRemote.Parent = remotes
 
 remotes.Parent = ReplicatedStorage
 
+-- Penanda di tanah selama bantuan dalam perjalanan. Lingkaran menunjukkan area efek,
+-- supaya pemain (termasuk tim) tahu harus menyingkir.
+local function spawnBeacon(def: Config.Stratagem, position: Vector3): Part
+	local beacon = Instance.new("Part")
+	beacon.Name = `{def.id}_beacon`
+	beacon.Shape = Enum.PartType.Ball
+	beacon.Size = Vector3.one * 1.5
+	beacon.Anchored = true
+	beacon.CanCollide = false
+	beacon.CanQuery = false
+	beacon.Material = Enum.Material.Neon
+	beacon.Color = def.color
+	beacon.Position = position + Vector3.new(0, 0.75, 0)
+
+	if def.radius then
+		local ring = Instance.new("Part")
+		ring.Name = "AreaRing"
+		ring.Shape = Enum.PartType.Cylinder
+		ring.Size = Vector3.new(0.2, def.radius * 2, def.radius * 2)
+		ring.CFrame = CFrame.new(position + Vector3.new(0, 0.15, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+		ring.Anchored = true
+		ring.CanCollide = false
+		ring.CanQuery = false
+		ring.Material = Enum.Material.Neon
+		ring.Color = def.color
+		ring.Transparency = 0.7
+		ring.Parent = beacon
+	end
+
+	beacon.Parent = workspace
+	return beacon
+end
+
 -- Waktu server (workspace:GetServerTimeNow) kapan sinyal tersebut siap lagi.
 local readyAt: { [Player]: { [string]: number } } = {}
 
@@ -73,8 +106,14 @@ throwRemote.OnServerEvent:Connect(function(player: Player, id: unknown, position
 	cooldowns[id] = now + def.cooldown
 	resultRemote:FireClient(player, id, true, cooldowns[id])
 
+	local beacon = spawnBeacon(def, position)
 	task.delay(def.callDelay, function()
 		-- Pemain boleh keluar atau mati setelah melempar; bantuan tetap jatuh.
-		Handlers[id](player, position)
+		-- pcall: handler yang error tidak boleh meninggalkan penanda menggantung.
+		local success, err = pcall(Handlers[id], player, position)
+		if not success then
+			warn(`Handler {id} gagal: {err}`)
+		end
+		beacon:Destroy()
 	end)
 end)
