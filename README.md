@@ -7,7 +7,7 @@ Game co-op 4 pemain bertema sci-fi militer serius: terjun ke planet musuh, seles
 - [x] 1. Sistem sinyal bantuan lewat radio (menu + bidikan kamera atas)
 - [x] 2. Serangan orbital dan paket logistik
 - [x] 3. Musuh gerombolan (alien dan mesin) dan senapan dasar
-- [ ] 4. Misi dan evakuasi
+- [x] 4. Misi menara radio dan titik evakuasi
 - [ ] 5. Mati dan hidup kembali (bala bantuan dihapus; mekanisme respawn menyusul)
 
 ## Menjalankan
@@ -34,6 +34,9 @@ Buka Roblox Studio, buat place kosong (Baseplate), lalu sambungkan lewat plugin 
 | `src/server/SwarmDirector.server.luau` | Script, nama `SwarmDirector` | `ServerScriptService` > `Server` |
 | `src/server/WeaponService.server.luau` | Script, nama `WeaponService` | `ServerScriptService` > `Server` |
 | `src/client/WeaponInput.client.luau` | LocalScript, nama `WeaponInput` | `StarterPlayer` > `StarterPlayerScripts` > `Client` |
+| `src/shared/MissionConfig.luau` | ModuleScript, nama `MissionConfig` | `ReplicatedStorage` > `Shared` |
+| `src/server/MissionService.server.luau` | Script, nama `MissionService` | `ServerScriptService` > `Server` |
+| `src/client/MissionHUD.client.luau` | LocalScript, nama `MissionHUD` | `StarterPlayer` > `StarterPlayerScripts` > `Client` |
 
 Nama folder dan script harus sama persis, karena script saling `require` lewat path itu.
 
@@ -50,6 +53,17 @@ Nama folder dan script harus sama persis, karena script saling `require` lewat p
 Game **tidak berhenti** saat kamu membidik: karakter tetap diam di tempat dan musuh tetap menyerang. Cari tempat aman sebelum memanggil.
 
 Nama, kooldaun, warna, dan ucapan radio ada di `src/shared/StratagemConfig.luau`.
+
+## Misi: Menara Radio
+
+1. Sekitar 8 detik setelah ada pemain hidup, 3 menara muncul di map (tiang dengan lampu merah). Penanda nama dan jarak tampil di atas tiap menara, tembus dinding.
+2. Tahan **E** di dekat menara selama 6 detik untuk menyalakannya (lampu jadi hijau dan ada pilar cahaya). Kalau menjauh atau melepas E, tahanan batal.
+3. Setelah ketiganya menyala, muncul **titik evakuasi** (lingkaran hijau). **Semua pemain yang hidup** harus berada di dalam lingkaran 5 detik berturut-turut. Kalau ada yang keluar, progres turun pelan.
+4. Misi selesai. Setelah 12 detik, ronde baru dimulai dengan menara baru.
+
+Posisi default dihitung dari `SpawnLocation`. Untuk map sendiri, buat folder `MissionPoints` di Workspace berisi Part bernama `Tower1`, `Tower2`, ... dan `Evac`; posisi Part itu dipakai (Part boleh dibuat transparan atau digeser ke bawah tanah). Angka-angkanya ada di `MissionConfig.luau`.
+
+Belum ada: musuh yang menyerang saat menara dinyalakan atau saat evakuasi (gelombang musuh sedang dimatikan), kondisi gagal, dan hukuman kalau semua pemain mati.
 
 ## Senjata dan musuh
 
