@@ -19,7 +19,7 @@ Config.MAX_THROW_DISTANCE = 120
 Config.Stratagems = {
 	{
 		id = "airstrike",
-		name = "Serangan Udara",
+		name = "Serangan Orbital",
 		code = { "U", "R", "R", "D" },
 		cooldown = 25,
 		callDelay = 3,
@@ -27,7 +27,7 @@ Config.Stratagems = {
 	},
 	{
 		id = "ammo",
-		name = "Kotak Amunisi",
+		name = "Paket Logistik",
 		code = { "D", "L", "D", "U" },
 		cooldown = 12,
 		callDelay = 2,
@@ -35,7 +35,7 @@ Config.Stratagems = {
 	},
 	{
 		id = "reinforce",
-		name = "Bala Bantuan",
+		name = "Penerjunan Pasukan",
 		code = { "L", "U", "D", "R", "U" },
 		cooldown = 40,
 		callDelay = 4,

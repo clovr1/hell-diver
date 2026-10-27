@@ -1,6 +1,6 @@
 # Hell Diver (Roblox)
 
-Game co-op 4 pemain: terjun ke planet musuh, selesaikan misi, kabur ke titik evakuasi.
+Game co-op 4 pemain bertema sci-fi militer serius: terjun ke planet musuh, selesaikan misi, kabur ke titik evakuasi.
 
 ## Status
 
@@ -40,9 +40,9 @@ Nama folder dan script harus sama persis, karena script saling `require` lewat p
 
 | Sinyal | Kombinasi |
 | --- | --- |
-| Serangan Udara | ↑ → → ↓ |
-| Kotak Amunisi | ↓ ← ↓ ↑ |
-| Bala Bantuan | ← ↑ ↓ → ↑ |
+| Serangan Orbital | ↑ → → ↓ |
+| Paket Logistik | ↓ ← ↓ ↑ |
+| Penerjunan Pasukan | ← ↑ ↓ → ↑ |
 
 Semua nama, kombinasi, kooldaun, dan warna ada di `src/shared/StratagemConfig.luau`.
 
