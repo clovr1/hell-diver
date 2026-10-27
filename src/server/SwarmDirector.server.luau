@@ -8,6 +8,9 @@ local EnemyConfig = require(ReplicatedStorage.Shared.EnemyConfig)
 local EnemyService = require(script.Parent.EnemyService)
 
 local D = EnemyConfig.Director
+if not D.enabled then
+	return -- gelombang dimatikan di EnemyConfig.Director.enabled
+end
 local rng = Random.new()
 
 local totalWeight = 0

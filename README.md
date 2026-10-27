@@ -57,6 +57,7 @@ Nama, kooldaun, warna, dan ucapan radio ada di `src/shared/StratagemConfig.luau`
 - Selama radio terbuka atau sedang membidik, klik tidak menembak.
 - **Pemburu Kawanan** (alien): cepat, 40 HP, datang berkelompok.
 - **Unit Penjaga** (mesin): lambat, 120 HP, pukulan keras.
+- **Gelombang musuh otomatis sedang dimatikan** (`Director.enabled = false` di `EnemyConfig.luau`); ubah ke `true` untuk menyalakan.
 - Kelompok 3-5 musuh muncul tiap 25 detik di jarak 70-100 stud dari pemain, mulai 15 detik setelah game dimulai, maksimal 40 musuh hidup sekaligus. Semua angka ada di `EnemyConfig.luau` dan `WeaponConfig.luau`.
 - Serangan Orbital juga melukai musuh.
 

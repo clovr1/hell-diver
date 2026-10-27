@@ -49,6 +49,7 @@ EnemyConfig.Enemies = {
 } :: { [string]: EnemyDef }
 
 EnemyConfig.Director = {
+	enabled = false, -- true untuk menyalakan gelombang musuh otomatis
 	firstDelay = 15, -- detik sebelum gelombang pertama
 	interval = 25, -- detik antar kelompok
 	groupMin = 3,
