@@ -159,7 +159,7 @@ local function scanPulse(position: Vector3, color: Color3, radius: number)
 	pulse.Name = "ScanPulse"
 	pulse.Shape = Enum.PartType.Cylinder
 	pulse.Size = Vector3.new(0.3, 4, 4)
-	pulse.CFrame = CFrame.new(position + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+	pulse.CFrame = CFrame.new(position) * CFrame.Angles(0, 0, math.pi / 2)
 	pulse.Anchored = true
 	pulse.CanCollide = false
 	pulse.CanQuery = false
@@ -170,60 +170,83 @@ local function scanPulse(position: Vector3, color: Color3, radius: number)
 	pulse.Parent = workspace
 	TweenService:Create(
 		pulse,
-		TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 		{ Size = Vector3.new(0.3, radius * 2, radius * 2), Transparency = 1 }
 	):Play()
-	Debris:AddItem(pulse, 1.3)
+	Debris:AddItem(pulse, 1.6)
 end
 
--- Menandai musuh di dekat titik pindai selama SCAN_DURATION; tembus dinding dan terlihat semua pemain.
-local function scan(_player: Player, position: Vector3)
+local function aliveRootPosition(player: Player): Vector3?
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if humanoid and humanoid.Health > 0 and root and root:IsA("BasePart") then
+		return root.Position
+	end
+	return nil
+end
+
+-- Radar: selama SCAN_DURATION, musuh dalam radius dari pemain yang memanggil ditandai
+-- (siluet tembus dinding, terlihat semua pemain). Pusatnya ikut bergerak bersama pemain;
+-- musuh yang keluar radius kehilangan tanda. Kalau lebih dari MAX_HIGHLIGHTS, yang terdekat dipilih.
+local function scan(player: Player, _position: Vector3)
 	local def = Config.ById.scan
 	local radius = def.radius :: number
-	scanPulse(position, def.color, radius)
+
+	local first = aliveRootPosition(player)
+	if first then
+		scanPulse(first - Vector3.new(0, 2.5, 0), def.color, radius)
+	end
 
 	local tagged: { [Model]: Highlight } = {}
-	local taggedCount = 0
 	local endTime = os.clock() + SCAN_DURATION
 
 	while os.clock() < endTime do
-		for model, highlight in tagged do
-			local humanoid = model:FindFirstChildOfClass("Humanoid")
-			if not model.Parent or not humanoid or humanoid.Health <= 0 then
-				highlight:Destroy()
-				tagged[model] = nil
-				taggedCount -= 1
-			end
+		local origin = aliveRootPosition(player)
+		if not origin then
+			break -- pemanggil mati atau keluar
 		end
 
+		local candidates: { { model: Model, distance: number } } = {}
 		local enemies = workspace:FindFirstChild("Enemies")
-		if enemies and taggedCount < MAX_HIGHLIGHTS then
+		if enemies then
 			for _, model in enemies:GetChildren() do
-				if taggedCount >= MAX_HIGHLIGHTS then
-					break
+				if model:IsA("Model") then
+					local root = model:FindFirstChild("HumanoidRootPart")
+					local humanoid = model:FindFirstChildOfClass("Humanoid")
+					if root and root:IsA("BasePart") and humanoid and humanoid.Health > 0 then
+						local distance = (root.Position - origin).Magnitude
+						if distance <= radius then
+							table.insert(candidates, { model = model, distance = distance })
+						end
+					end
 				end
-				local root = model:IsA("Model") and model:FindFirstChild("HumanoidRootPart")
-				local humanoid = model:FindFirstChildOfClass("Humanoid")
-				if
-					model:IsA("Model")
-					and not tagged[model]
-					and root
-					and root:IsA("BasePart")
-					and humanoid
-					and humanoid.Health > 0
-					and (root.Position - position).Magnitude <= radius
-				then
-					local highlight = Instance.new("Highlight")
-					highlight.Adornee = model
-					highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-					highlight.FillColor = def.color
-					highlight.FillTransparency = 0.6
-					highlight.OutlineColor = Color3.new(1, 1, 1)
-					highlight.OutlineTransparency = 0
-					highlight.Parent = model
-					tagged[model] = highlight
-					taggedCount += 1
-				end
+			end
+		end
+		table.sort(candidates, function(a, b)
+			return a.distance < b.distance
+		end)
+
+		local keep: { [Model]: boolean } = {}
+		for i = 1, math.min(#candidates, MAX_HIGHLIGHTS) do
+			local model = candidates[i].model
+			keep[model] = true
+			if not tagged[model] then
+				local highlight = Instance.new("Highlight")
+				highlight.Adornee = model
+				highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+				highlight.FillColor = def.color
+				highlight.FillTransparency = 0.6
+				highlight.OutlineColor = Color3.new(1, 1, 1)
+				highlight.OutlineTransparency = 0
+				highlight.Parent = model
+				tagged[model] = highlight
+			end
+		end
+		for model, highlight in tagged do
+			if not keep[model] then
+				highlight:Destroy()
+				tagged[model] = nil
 			end
 		end
 

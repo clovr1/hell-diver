@@ -9,7 +9,8 @@ export type Stratagem = {
 	cooldown: number, -- detik, mulai dihitung saat panggilan dikonfirmasi
 	callDelay: number, -- detik dari panggilan sampai bantuan tiba
 	color: Color3,
-	radius: number?, -- radius area efek (stud); kalau ada, ditampilkan sebagai lingkaran di tanah
+	radius: number?, -- radius efek (stud); untuk sinyal "area" ditampilkan sebagai lingkaran bidik dan penanda
+	beacon: boolean?, -- false: tidak ada penanda di tanah (default: ada)
 	callLine: string, -- ucapan di radio saat dipanggil
 }
 
@@ -44,12 +45,13 @@ Config.Stratagems = {
 	{
 		id = "scan",
 		name = "Pindai Musuh",
-		targeting = "area",
+		targeting = "self",
 		cooldown = 30,
-		callDelay = 1.5,
+		callDelay = 0.5,
 		color = Color3.fromRGB(190, 120, 255),
-		radius = 60, -- radius pindai
-		callLine = "Markas, pindai area ini. Tandai semua kontak musuh.",
+		radius = 100, -- jarak pindai dari pemain
+		beacon = false,
+		callLine = "Markas, pindai area sekitar saya.",
 	},
 } :: { Stratagem }
 

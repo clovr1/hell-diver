@@ -40,12 +40,12 @@ Nama folder dan script harus sama persis, karena script saling `require` lewat p
 ## Cara main
 
 1. Tekan **Q** (atau tombol **RADIO** di kiri bawah) untuk membuka radio. Pilih bantuan dengan klik atau tombol **1**-**3**. Bantuan yang sedang kooldaun berwarna abu-abu.
-2. **Paket Logistik** langsung dipanggil di posisimu, tanpa membidik (jatuh beberapa langkah di depan karakter). **Serangan Orbital** dan **Pindai Musuh** membuat kamera naik ke tampilan atas: gerakkan kursor untuk membidik, lingkaran berwarna menunjukkan area efek, dan bidikan dibatasi sejauh 110 stud dari karakter.
-3. **Klik kiri** untuk memanggil. **Klik kanan**, **Q**, atau **X** untuk membatalkan. Di perangkat sentuh, tombol **PANGGIL** dan **BATAL** muncul otomatis.
-4. Kamera turun lagi dan penanda menyala di sasaran. Beberapa detik kemudian bantuan tiba:
+2. **Paket Logistik** dan **Pindai Musuh** langsung dipanggil di posisimu, tanpa membidik. Hanya **Serangan Orbital** yang membuat kamera naik ke tampilan atas: gerakkan kursor untuk membidik, lingkaran merah menunjukkan area efek, dan bidikan dibatasi sejauh 110 stud dari karakter.
+3. Saat membidik, **klik kiri** untuk memanggil. **Klik kanan**, **Q**, atau **X** untuk membatalkan. Di perangkat sentuh, tombol **PANGGIL** dan **BATAL** muncul otomatis.
+4. Bantuan tiba beberapa detik kemudian (untuk Serangan Orbital, kamera turun lagi dan penanda menyala di sasaran):
    - **Serangan Orbital**: 12 peluru jatuh dari langit satu per satu (tampak sebagai garis cahaya), tersebar merata di dalam lingkaran merah dan meledak saat mendarat. **Friendly fire aktif**, termasuk untukmu sendiri; tiap ledakan 70 damage di pusat, turun ke 15 di tepi, dan ledakan yang tumpang tindih menumpuk.
    - **Paket Logistik**: peti jatuh dari langit di dekatmu. Tahan E di dekatnya untuk mengisi amunisi (attribute `Ammo` pada Player). Tiap pemain sekali per peti, peti habis setelah 4 pengambilan atau 60 detik.
-   - **Pindai Musuh**: gelombang cahaya ungu menyapu area 60 stud. Selama 15 detik, musuh di dalam area ditandai (siluet ungu, tembus dinding) dan terlihat oleh semua pemain. Maksimal 30 musuh ditandai sekaligus.
+   - **Pindai Musuh**: gelombang cahaya ungu menyebar dari kakimu. Selama 15 detik, musuh dalam radius 100 stud darimu ditandai (siluet ungu, tembus dinding) dan terlihat oleh semua pemain. Pusat pindai ikut bergerak bersamamu, dan musuh yang keluar radius kehilangan tanda. Maksimal 30 musuh ditandai (yang terdekat).
 
 Game **tidak berhenti** saat kamu membidik: karakter tetap diam di tempat dan musuh tetap menyerang. Cari tempat aman sebelum memanggil.
 

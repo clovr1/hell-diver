@@ -35,7 +35,7 @@ local function spawnBeacon(def: Config.Stratagem, position: Vector3): Part
 	beacon.Color = def.color
 	beacon.Position = position + Vector3.new(0, 0.75, 0)
 
-	if def.radius then
+	if def.radius and def.targeting == "area" then
 		local ring = Instance.new("Part")
 		ring.Name = "AreaRing"
 		ring.Shape = Enum.PartType.Cylinder
@@ -128,7 +128,7 @@ throwRemote.OnServerEvent:Connect(function(player: Player, id: unknown, position
 	cooldowns[id] = now + def.cooldown
 	resultRemote:FireClient(player, id, true, cooldowns[id])
 
-	local beacon = spawnBeacon(def, target)
+	local beacon = if def.beacon ~= false then spawnBeacon(def, target) else nil
 	task.delay(def.callDelay, function()
 		-- Pemain boleh keluar atau mati setelah melempar; bantuan tetap jatuh.
 		-- pcall: handler yang error tidak boleh meninggalkan penanda menggantung.
@@ -136,6 +136,8 @@ throwRemote.OnServerEvent:Connect(function(player: Player, id: unknown, position
 		if not success then
 			warn(`Handler {id} gagal: {err}`)
 		end
-		beacon:Destroy()
+		if beacon then
+			beacon:Destroy()
+		end
 	end)
 end)
