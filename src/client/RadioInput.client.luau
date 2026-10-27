@@ -164,6 +164,20 @@ confirmButton.Position = UDim2.fromOffset(12, 50)
 local cancelButton = makeButton("BATAL", UDim2.fromOffset(120, 28), aimBar)
 cancelButton.Position = UDim2.fromOffset(222, 50)
 
+-- Tombol PANGGIL/BATAL hanya untuk sentuhan; dengan mouse, klik kiri/kanan sudah cukup.
+local function applyAimLayout()
+	confirmButton.Visible = usingTouch
+	cancelButton.Visible = usingTouch
+	aimBar.Size = UDim2.fromOffset(460, if usingTouch then 84 else 54)
+end
+
+local function aimHintText(): string
+	if usingTouch then
+		return "Ketuk peta untuk membidik, lalu tekan PANGGIL."
+	end
+	return "Klik kiri untuk memanggil, klik kanan untuk batal."
+end
+
 local toast = Instance.new("TextLabel")
 toast.AnchorPoint = Vector2.new(0.5, 0)
 toast.Position = UDim2.new(0.5, 0, 0, 70)
@@ -216,6 +230,7 @@ local function render()
 		aimTitle.Text = `BIDIK: {def.name}`
 		aimTitle.TextColor3 = def.color
 	end
+	applyAimLayout()
 	refreshRows()
 end
 
@@ -295,6 +310,7 @@ local function updateReticle(root: BasePart, camera: Camera)
 		return
 	end
 
+	applyAimLayout() -- perangkat bisa berganti antara mouse dan sentuhan saat membidik
 	if not usingTouch then
 		pointer = UserInputService:GetMouseLocation()
 	end
@@ -335,7 +351,7 @@ local function updateReticle(root: BasePart, camera: Camera)
 	part.Transparency = 0.55
 	aimHint.Text = if clamped
 		then "Di luar jangkauan radio — dibatasi di titik terjauh"
-		else "Gerakkan kursor untuk membidik. Klik kanan untuk batal."
+		else aimHintText()
 end
 
 -- Transisi ------------------------------------------------------------------
@@ -379,7 +395,7 @@ local function beginAim(def: Config.Stratagem)
 	else
 		pointer = UserInputService:GetMouseLocation()
 	end
-	aimHint.Text = "Gerakkan kursor untuk membidik. Klik kanan untuk batal."
+	aimHint.Text = aimHintText()
 	blendTarget = 1
 	setMode("aiming")
 end
