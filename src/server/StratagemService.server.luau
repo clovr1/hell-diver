@@ -35,7 +35,7 @@ local function spawnBeacon(def: Config.Stratagem, position: Vector3): Part
 	beacon.Color = def.color
 	beacon.Position = position + Vector3.new(0, 0.75, 0)
 
-	if def.radius then
+	if def.radius and def.targeting == "area" then
 		local ring = Instance.new("Part")
 		ring.Name = "AreaRing"
 		ring.Shape = Enum.PartType.Cylinder
@@ -77,14 +77,32 @@ local function getAliveRoot(player: Player): BasePart?
 	return nil
 end
 
+-- Titik jatuh untuk sinyal "self": sedikit di depan karakter, di permukaan tanah.
+-- Dihitung server, jadi posisi dari client diabaikan untuk sinyal ini.
+local SELF_DROP_OFFSET = 6
+
+local function groundInFront(root: BasePart): Vector3
+	local look = root.CFrame.LookVector
+	local forward = Vector3.new(look.X, 0, look.Z)
+	local spot = root.Position
+	if forward.Magnitude > 0.01 then
+		spot += forward.Unit * SELF_DROP_OFFSET
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { root.Parent :: Instance }
+	local hit = workspace:Raycast(spot + Vector3.new(0, 5, 0), Vector3.new(0, -30, 0), params)
+	return if hit then hit.Position else spot - Vector3.new(0, 3, 0)
+end
+
 throwRemote.OnServerEvent:Connect(function(player: Player, id: unknown, position: unknown)
 	if typeof(id) ~= "string" or typeof(position) ~= "Vector3" then
 		return
 	end
 	local def = Config.ById[id]
 	local cooldowns = readyAt[player]
-	if not def or not cooldowns then
-		return
+	if not def or not cooldowns or player:GetAttribute("InMission") ~= true then
+		return -- bantuan hanya aktif saat misi, bukan di lobby
 	end
 	-- NaN/inf lolos typeof; tolak.
 	if position ~= position or position.Magnitude == math.huge then
@@ -94,9 +112,13 @@ throwRemote.OnServerEvent:Connect(function(player: Player, id: unknown, position
 	local now = workspace:GetServerTimeNow()
 	local root = getAliveRoot(player)
 	local ready = cooldowns[id] or 0
+	local target: Vector3 = position
+	if root and def.targeting == "self" then
+		target = groundInFront(root)
+	end
 	local ok = root ~= nil
 		and now >= ready - 0.25 -- toleransi latensi
-		and (position - root.Position).Magnitude <= Config.MAX_THROW_DISTANCE + 5
+		and (target - root.Position).Magnitude <= Config.MAX_THROW_DISTANCE + 5
 
 	if not ok then
 		resultRemote:FireClient(player, id, false, ready)
@@ -106,14 +128,16 @@ throwRemote.OnServerEvent:Connect(function(player: Player, id: unknown, position
 	cooldowns[id] = now + def.cooldown
 	resultRemote:FireClient(player, id, true, cooldowns[id])
 
-	local beacon = spawnBeacon(def, position)
+	local beacon = if def.beacon ~= false then spawnBeacon(def, target) else nil
 	task.delay(def.callDelay, function()
 		-- Pemain boleh keluar atau mati setelah melempar; bantuan tetap jatuh.
 		-- pcall: handler yang error tidak boleh meninggalkan penanda menggantung.
-		local success, err = pcall(Handlers[id], player, position)
+		local success, err = pcall(Handlers[id], player, target)
 		if not success then
 			warn(`Handler {id} gagal: {err}`)
 		end
-		beacon:Destroy()
+		if beacon then
+			beacon:Destroy()
+		end
 	end)
 end)

@@ -1,6 +1,5 @@
 --!strict
 -- Efek tiap sinyal bantuan. Dipanggil server setelah callDelay; boleh yield.
--- "reinforce" masih placeholder (tiang cahaya), diganti di langkah 5.
 
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,11 +11,14 @@ export type Handler = (player: Player, position: Vector3) -> ()
 
 -- Serangan orbital ----------------------------------------------------------
 
-local STRIKE_BLASTS = 6
-local STRIKE_INTERVAL = 0.35
-local BLAST_RADIUS = 10
-local BLAST_DAMAGE_MAX = 120 -- tepat di pusat ledakan
-local BLAST_DAMAGE_MIN = 20 -- di tepi radius
+local STRIKE_BLASTS = 12
+local STRIKE_INTERVAL = 0.22 -- jeda antar peluru dijatuhkan
+local SHELL_FALL_TIME = 0.5
+local SHELL_HEIGHT = 120
+local BLAST_RADIUS = 8
+local BLAST_DAMAGE_MAX = 70 -- tepat di pusat ledakan
+local BLAST_DAMAGE_MIN = 15 -- di tepi radius
+local GOLDEN_ANGLE = math.pi * (3 - math.sqrt(5))
 
 -- Friendly fire disengaja: semua Humanoid kena, termasuk pelempar dan rekan setim.
 local function blast(position: Vector3)
@@ -46,19 +48,54 @@ local function blast(position: Vector3)
 	end
 end
 
+-- Peluru terlihat jatuh dari langit, lalu meledak saat mendarat.
+local function dropShell(position: Vector3, color: Color3)
+	local shell = Instance.new("Part")
+	shell.Name = "OrbitalShell"
+	shell.Size = Vector3.new(0.7, 7, 0.7)
+	shell.Anchored = true
+	shell.CanCollide = false
+	shell.CanQuery = false
+	shell.CanTouch = false
+	shell.Material = Enum.Material.Neon
+	shell.Color = color
+	shell.Position = position + Vector3.new(0, SHELL_HEIGHT, 0)
+	shell.Parent = workspace
+
+	local fall = TweenService:Create(
+		shell,
+		TweenInfo.new(SHELL_FALL_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+		{ Position = position + Vector3.new(0, 3.5, 0) }
+	)
+	fall:Play()
+	fall.Completed:Wait()
+	shell:Destroy()
+	blast(position)
+end
+
 local function orbitalStrike(_player: Player, position: Vector3)
-	local area = Config.ById.airstrike.radius :: number
+	local def = Config.ById.airstrike
+	local spread = (def.radius :: number) - BLAST_RADIUS -- ledakan tetap di dalam lingkaran
 	local rng = Random.new()
+
+	-- Titik tersebar merata (spiral sudut emas), lalu urutannya diacak.
+	local spiralOffset = rng:NextNumber(0, math.pi * 2)
+	local points: { Vector3 } = {}
 	for i = 1, STRIKE_BLASTS do
-		local offset = Vector3.zero
-		if i > 1 then -- ledakan pertama tepat di penanda
-			local angle = rng:NextNumber(0, math.pi * 2)
-			local distance = math.sqrt(rng:NextNumber()) * (area - BLAST_RADIUS) -- seluruh ledakan tetap di dalam lingkaran
-			offset = Vector3.new(math.cos(angle) * distance, 0, math.sin(angle) * distance)
-		end
-		blast(position + offset)
-		task.wait(STRIKE_INTERVAL)
+		local radius = math.sqrt((i - 0.5) / STRIKE_BLASTS) * spread
+		local angle = spiralOffset + i * GOLDEN_ANGLE
+		table.insert(points, position + Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius))
 	end
+	for i = #points, 2, -1 do
+		local j = rng:NextInteger(1, i)
+		points[i], points[j] = points[j], points[i]
+	end
+
+	for i, point in points do
+		task.delay((i - 1) * STRIKE_INTERVAL, dropShell, point, def.color)
+	end
+	-- Tahan handler sampai peluru terakhir meledak, supaya penanda tidak hilang lebih awal.
+	task.wait((STRIKE_BLASTS - 1) * STRIKE_INTERVAL + SHELL_FALL_TIME + 0.2)
 end
 
 -- Paket logistik ------------------------------------------------------------
@@ -110,31 +147,121 @@ local function ammoCrate(_player: Player, position: Vector3)
 	end)
 end
 
--- Placeholder ---------------------------------------------------------------
+-- Pindai musuh ---------------------------------------------------------------
 
-local function placeholder(id: string): Handler
-	return function(player, position)
-		local def = Config.ById[id]
-		local column = Instance.new("Part")
-		column.Name = `{id}_placeholder`
-		column.Anchored = true
-		column.CanCollide = false
-		column.CanQuery = false
-		column.Material = Enum.Material.Neon
-		column.Color = def.color
-		column.Transparency = 0.4
-		column.Size = Vector3.new(4, 60, 4)
-		column.Position = position + Vector3.new(0, 30, 0)
-		column.Parent = workspace
-		Debris:AddItem(column, 1.5)
-		print(`[{id}] tiba di {position} (dipanggil {player.Name})`)
+local SCAN_DURATION = 15
+local SCAN_INTERVAL = 0.5
+-- Roblox hanya merender ~31 Highlight sekaligus; sisakan satu untuk efek lain.
+local MAX_HIGHLIGHTS = 30
+
+local function scanPulse(position: Vector3, color: Color3, radius: number)
+	local pulse = Instance.new("Part")
+	pulse.Name = "ScanPulse"
+	pulse.Shape = Enum.PartType.Cylinder
+	pulse.Size = Vector3.new(0.3, 4, 4)
+	pulse.CFrame = CFrame.new(position) * CFrame.Angles(0, 0, math.pi / 2)
+	pulse.Anchored = true
+	pulse.CanCollide = false
+	pulse.CanQuery = false
+	pulse.CanTouch = false
+	pulse.Material = Enum.Material.Neon
+	pulse.Color = color
+	pulse.Transparency = 0.3
+	pulse.Parent = workspace
+	TweenService:Create(
+		pulse,
+		TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ Size = Vector3.new(0.3, radius * 2, radius * 2), Transparency = 1 }
+	):Play()
+	Debris:AddItem(pulse, 1.6)
+end
+
+local function aliveRootPosition(player: Player): Vector3?
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if humanoid and humanoid.Health > 0 and root and root:IsA("BasePart") then
+		return root.Position
+	end
+	return nil
+end
+
+-- Radar: selama SCAN_DURATION, musuh dalam radius dari pemain yang memanggil ditandai
+-- (siluet tembus dinding, terlihat semua pemain). Pusatnya ikut bergerak bersama pemain;
+-- musuh yang keluar radius kehilangan tanda. Kalau lebih dari MAX_HIGHLIGHTS, yang terdekat dipilih.
+local function scan(player: Player, _position: Vector3)
+	local def = Config.ById.scan
+	local radius = def.radius :: number
+
+	local first = aliveRootPosition(player)
+	if first then
+		scanPulse(first - Vector3.new(0, 2.5, 0), def.color, radius)
+	end
+
+	local tagged: { [Model]: Highlight } = {}
+	local endTime = os.clock() + SCAN_DURATION
+
+	while os.clock() < endTime do
+		local origin = aliveRootPosition(player)
+		if not origin then
+			break -- pemanggil mati atau keluar
+		end
+
+		local candidates: { { model: Model, distance: number } } = {}
+		local enemies = workspace:FindFirstChild("Enemies")
+		if enemies then
+			for _, model in enemies:GetChildren() do
+				if model:IsA("Model") then
+					local root = model:FindFirstChild("HumanoidRootPart")
+					local humanoid = model:FindFirstChildOfClass("Humanoid")
+					if root and root:IsA("BasePart") and humanoid and humanoid.Health > 0 then
+						local distance = (root.Position - origin).Magnitude
+						if distance <= radius then
+							table.insert(candidates, { model = model, distance = distance })
+						end
+					end
+				end
+			end
+		end
+		table.sort(candidates, function(a, b)
+			return a.distance < b.distance
+		end)
+
+		local keep: { [Model]: boolean } = {}
+		for i = 1, math.min(#candidates, MAX_HIGHLIGHTS) do
+			local model = candidates[i].model
+			keep[model] = true
+			if not tagged[model] then
+				local highlight = Instance.new("Highlight")
+				highlight.Adornee = model
+				highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+				highlight.FillColor = def.color
+				highlight.FillTransparency = 0.6
+				highlight.OutlineColor = Color3.new(1, 1, 1)
+				highlight.OutlineTransparency = 0
+				highlight.Parent = model
+				tagged[model] = highlight
+			end
+		end
+		for model, highlight in tagged do
+			if not keep[model] then
+				highlight:Destroy()
+				tagged[model] = nil
+			end
+		end
+
+		task.wait(SCAN_INTERVAL)
+	end
+
+	for _, highlight in tagged do
+		highlight:Destroy()
 	end
 end
 
 local Handlers: { [string]: Handler } = {
 	airstrike = orbitalStrike,
 	ammo = ammoCrate,
-	reinforce = placeholder("reinforce"),
+	scan = scan,
 }
 
 return Handlers

@@ -1,50 +1,57 @@
 --!strict
--- Daftar sinyal bantuan. Dipakai client (UI + pencocokan kombinasi) dan server (validasi).
--- Arah: "U" atas, "D" bawah, "L" kiri, "R" kanan.
+-- Daftar sinyal bantuan. Dipakai client (menu radio + bidikan) dan server (validasi).
 
 export type Stratagem = {
 	id: string,
 	name: string,
-	code: { string },
-	cooldown: number, -- detik, mulai dihitung saat penanda dilempar
-	callDelay: number, -- detik dari penanda mendarat sampai bantuan tiba
+	-- "area": pemain membidik titik di peta. "self": langsung jatuh di dekat pemain, tanpa membidik.
+	targeting: "area" | "self",
+	cooldown: number, -- detik, mulai dihitung saat panggilan dikonfirmasi
+	callDelay: number, -- detik dari panggilan sampai bantuan tiba
 	color: Color3,
-	radius: number?, -- radius area efek (stud); kalau ada, ditampilkan sebagai lingkaran di tanah
+	radius: number?, -- radius efek (stud); untuk sinyal "area" ditampilkan sebagai lingkaran bidik dan penanda
+	beacon: boolean?, -- false: tidak ada penanda di tanah (default: ada)
+	callLine: string, -- ucapan di radio saat dipanggil
 }
 
 local Config = {}
 
--- Jarak maksimal lempar dari karakter (stud). Server menolak yang lebih jauh.
+-- Jarak maksimal sasaran dari karakter (stud). Client membatasi bidikan, server menolak yang lebih jauh.
 Config.MAX_THROW_DISTANCE = 120
 
--- Isi penuh amunisi (dibaca sistem senjata nanti lewat attribute "Ammo" pada Player).
-Config.MAX_AMMO = 120
+-- Isi penuh amunisi (attribute "Ammo" pada Player, dipakai sistem senjata).
+Config.MAX_AMMO = 300
 
 Config.Stratagems = {
 	{
 		id = "airstrike",
 		name = "Serangan Orbital",
-		code = { "U", "R", "R", "D" },
+		targeting = "area",
 		cooldown = 25,
 		callDelay = 3,
 		color = Color3.fromRGB(255, 90, 60),
 		radius = 18,
+		callLine = "Markas, minta serangan orbital di titik ini. Semua unit menjauh!",
 	},
 	{
 		id = "ammo",
 		name = "Paket Logistik",
-		code = { "D", "L", "D", "U" },
+		targeting = "self",
 		cooldown = 12,
 		callDelay = 2,
 		color = Color3.fromRGB(90, 200, 255),
+		callLine = "Markas, kirim paket logistik ke posisi saya.",
 	},
 	{
-		id = "reinforce",
-		name = "Penerjunan Pasukan",
-		code = { "L", "U", "D", "R", "U" },
-		cooldown = 40,
-		callDelay = 4,
-		color = Color3.fromRGB(120, 255, 120),
+		id = "scan",
+		name = "Pindai Musuh",
+		targeting = "self",
+		cooldown = 30,
+		callDelay = 0.5,
+		color = Color3.fromRGB(190, 120, 255),
+		radius = 100, -- jarak pindai dari pemain
+		beacon = false,
+		callLine = "Markas, pindai area sekitar saya.",
 	},
 } :: { Stratagem }
 
@@ -52,23 +59,5 @@ Config.ById = {} :: { [string]: Stratagem }
 for _, def in Config.Stratagems do
 	Config.ById[def.id] = def
 end
-
--- Kombinasi tidak boleh jadi awalan kombinasi lain, kalau tidak, yang panjang tidak pernah bisa dimasukkan.
-for _, a in Config.Stratagems do
-	for _, b in Config.Stratagems do
-		if a ~= b and #a.code <= #b.code then
-			local isPrefix = true
-			for i, dir in a.code do
-				if b.code[i] ~= dir then
-					isPrefix = false
-					break
-				end
-			end
-			assert(not isPrefix, `Kode {a.id} adalah awalan kode {b.id}`)
-		end
-	end
-end
-
-Config.ARROW_GLYPH = { U = "↑", D = "↓", L = "←", R = "→" } :: { [string]: string }
 
 return Config
