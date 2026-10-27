@@ -9,12 +9,16 @@ export type Stratagem = {
 	cooldown: number, -- detik, mulai dihitung saat penanda dilempar
 	callDelay: number, -- detik dari penanda mendarat sampai bantuan tiba
 	color: Color3,
+	radius: number?, -- radius area efek (stud); kalau ada, ditampilkan sebagai lingkaran di tanah
 }
 
 local Config = {}
 
 -- Jarak maksimal lempar dari karakter (stud). Server menolak yang lebih jauh.
 Config.MAX_THROW_DISTANCE = 120
+
+-- Isi penuh amunisi (dibaca sistem senjata nanti lewat attribute "Ammo" pada Player).
+Config.MAX_AMMO = 120
 
 Config.Stratagems = {
 	{
@@ -24,6 +28,7 @@ Config.Stratagems = {
 		cooldown = 25,
 		callDelay = 3,
 		color = Color3.fromRGB(255, 90, 60),
+		radius = 18,
 	},
 	{
 		id = "ammo",

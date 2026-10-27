@@ -5,7 +5,7 @@ Game co-op 4 pemain bertema sci-fi militer serius: terjun ke planet musuh, seles
 ## Status
 
 - [x] 1. Sistem input sinyal bantuan (Ctrl + kombinasi panah + lempar penanda)
-- [ ] 2. Serangan udara dan kotak amunisi
+- [x] 2. Serangan orbital dan paket logistik
 - [ ] 3. Musuh gerombolan
 - [ ] 4. Misi dan evakuasi
 - [ ] 5. Mati, bala bantuan, friendly fire
@@ -36,7 +36,10 @@ Nama folder dan script harus sama persis, karena script saling `require` lewat p
 1. Tahan **Ctrl kiri**. Panel sinyal muncul, WASD tidak menggerakkan karakter selama Ctrl ditahan.
 2. Ketik kombinasi dengan panah atau WASD. Langkah yang benar menyala kuning; salah satu langkah berarti mulai ulang.
 3. Setelah kombinasi lengkap, sinyal siap. Klik kiri untuk melempar penanda ke tanah (X atau Esc membatalkan).
-4. Beberapa detik kemudian bantuan tiba. Sementara ini berupa tiang cahaya placeholder.
+4. Penanda menyala di tanah. Beberapa detik kemudian bantuan tiba:
+   - **Serangan Orbital**: 6 ledakan beruntun di dalam lingkaran merah. **Friendly fire aktif**, termasuk untukmu sendiri; kerusakan 120 di pusat, turun ke 20 di tepi ledakan.
+   - **Paket Logistik**: peti jatuh dari langit. Tahan E di dekatnya untuk mengisi amunisi (attribute `Ammo` pada Player, terlihat di Explorer). Tiap pemain sekali per peti, peti habis setelah 4 pengambilan atau 60 detik.
+   - **Penerjunan Pasukan**: masih tiang cahaya placeholder (langkah 5).
 
 | Sinyal | Kombinasi |
 | --- | --- |
