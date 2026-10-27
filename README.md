@@ -43,7 +43,7 @@ Nama folder dan script harus sama persis, karena script saling `require` lewat p
 2. Kamera naik ke tampilan atas. Gerakkan kursor untuk membidik; lingkaran berwarna menunjukkan area efek, dan bidikan dibatasi sejauh 110 stud dari karakter.
 3. **Klik kiri** untuk memanggil. **Klik kanan**, **Q**, atau **X** untuk membatalkan. Di perangkat sentuh, tombol **PANGGIL** dan **BATAL** muncul otomatis.
 4. Kamera turun lagi dan penanda menyala di sasaran. Beberapa detik kemudian bantuan tiba:
-   - **Serangan Orbital**: 6 ledakan beruntun di dalam lingkaran merah. **Friendly fire aktif**, termasuk untukmu sendiri; kerusakan 120 di pusat, turun ke 20 di tepi ledakan.
+   - **Serangan Orbital**: 12 peluru jatuh dari langit satu per satu (tampak sebagai garis cahaya), tersebar merata di dalam lingkaran merah dan meledak saat mendarat. **Friendly fire aktif**, termasuk untukmu sendiri; tiap ledakan 70 damage di pusat, turun ke 15 di tepi, dan ledakan yang tumpang tindih menumpuk.
    - **Paket Logistik**: peti jatuh dari langit. Tahan E di dekatnya untuk mengisi amunisi (attribute `Ammo` pada Player). Tiap pemain sekali per peti, peti habis setelah 4 pengambilan atau 60 detik.
    - **Penerjunan Pasukan**: masih tiang cahaya placeholder (langkah 5).
 

@@ -12,11 +12,14 @@ export type Handler = (player: Player, position: Vector3) -> ()
 
 -- Serangan orbital ----------------------------------------------------------
 
-local STRIKE_BLASTS = 6
-local STRIKE_INTERVAL = 0.35
-local BLAST_RADIUS = 10
-local BLAST_DAMAGE_MAX = 120 -- tepat di pusat ledakan
-local BLAST_DAMAGE_MIN = 20 -- di tepi radius
+local STRIKE_BLASTS = 12
+local STRIKE_INTERVAL = 0.22 -- jeda antar peluru dijatuhkan
+local SHELL_FALL_TIME = 0.5
+local SHELL_HEIGHT = 120
+local BLAST_RADIUS = 8
+local BLAST_DAMAGE_MAX = 70 -- tepat di pusat ledakan
+local BLAST_DAMAGE_MIN = 15 -- di tepi radius
+local GOLDEN_ANGLE = math.pi * (3 - math.sqrt(5))
 
 -- Friendly fire disengaja: semua Humanoid kena, termasuk pelempar dan rekan setim.
 local function blast(position: Vector3)
@@ -46,19 +49,54 @@ local function blast(position: Vector3)
 	end
 end
 
+-- Peluru terlihat jatuh dari langit, lalu meledak saat mendarat.
+local function dropShell(position: Vector3, color: Color3)
+	local shell = Instance.new("Part")
+	shell.Name = "OrbitalShell"
+	shell.Size = Vector3.new(0.7, 7, 0.7)
+	shell.Anchored = true
+	shell.CanCollide = false
+	shell.CanQuery = false
+	shell.CanTouch = false
+	shell.Material = Enum.Material.Neon
+	shell.Color = color
+	shell.Position = position + Vector3.new(0, SHELL_HEIGHT, 0)
+	shell.Parent = workspace
+
+	local fall = TweenService:Create(
+		shell,
+		TweenInfo.new(SHELL_FALL_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+		{ Position = position + Vector3.new(0, 3.5, 0) }
+	)
+	fall:Play()
+	fall.Completed:Wait()
+	shell:Destroy()
+	blast(position)
+end
+
 local function orbitalStrike(_player: Player, position: Vector3)
-	local area = Config.ById.airstrike.radius :: number
+	local def = Config.ById.airstrike
+	local spread = (def.radius :: number) - BLAST_RADIUS -- ledakan tetap di dalam lingkaran
 	local rng = Random.new()
+
+	-- Titik tersebar merata (spiral sudut emas), lalu urutannya diacak.
+	local spiralOffset = rng:NextNumber(0, math.pi * 2)
+	local points: { Vector3 } = {}
 	for i = 1, STRIKE_BLASTS do
-		local offset = Vector3.zero
-		if i > 1 then -- ledakan pertama tepat di penanda
-			local angle = rng:NextNumber(0, math.pi * 2)
-			local distance = math.sqrt(rng:NextNumber()) * (area - BLAST_RADIUS) -- seluruh ledakan tetap di dalam lingkaran
-			offset = Vector3.new(math.cos(angle) * distance, 0, math.sin(angle) * distance)
-		end
-		blast(position + offset)
-		task.wait(STRIKE_INTERVAL)
+		local radius = math.sqrt((i - 0.5) / STRIKE_BLASTS) * spread
+		local angle = spiralOffset + i * GOLDEN_ANGLE
+		table.insert(points, position + Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius))
 	end
+	for i = #points, 2, -1 do
+		local j = rng:NextInteger(1, i)
+		points[i], points[j] = points[j], points[i]
+	end
+
+	for i, point in points do
+		task.delay((i - 1) * STRIKE_INTERVAL, dropShell, point, def.color)
+	end
+	-- Tahan handler sampai peluru terakhir meledak, supaya penanda tidak hilang lebih awal.
+	task.wait((STRIKE_BLASTS - 1) * STRIKE_INTERVAL + SHELL_FALL_TIME + 0.2)
 end
 
 -- Paket logistik ------------------------------------------------------------
