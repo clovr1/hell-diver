@@ -4,6 +4,8 @@
 export type Stratagem = {
 	id: string,
 	name: string,
+	-- "area": pemain membidik titik di peta. "self": langsung jatuh di dekat pemain, tanpa membidik.
+	targeting: "area" | "self",
 	cooldown: number, -- detik, mulai dihitung saat panggilan dikonfirmasi
 	callDelay: number, -- detik dari panggilan sampai bantuan tiba
 	color: Color3,
@@ -23,6 +25,7 @@ Config.Stratagems = {
 	{
 		id = "airstrike",
 		name = "Serangan Orbital",
+		targeting = "area",
 		cooldown = 25,
 		callDelay = 3,
 		color = Color3.fromRGB(255, 90, 60),
@@ -32,14 +35,16 @@ Config.Stratagems = {
 	{
 		id = "ammo",
 		name = "Paket Logistik",
+		targeting = "self",
 		cooldown = 12,
 		callDelay = 2,
 		color = Color3.fromRGB(90, 200, 255),
-		callLine = "Markas, kirim paket logistik ke titik ini.",
+		callLine = "Markas, kirim paket logistik ke posisi saya.",
 	},
 	{
 		id = "scan",
 		name = "Pindai Musuh",
+		targeting = "area",
 		cooldown = 30,
 		callDelay = 1.5,
 		color = Color3.fromRGB(190, 120, 255),

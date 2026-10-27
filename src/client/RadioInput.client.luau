@@ -216,7 +216,8 @@ local function refreshRows()
 		local remaining = (readyAt[def.id] or 0) - now
 		local suffix = if remaining > 0 then `   ({math.ceil(remaining)}d)` else ""
 		local row = rows[def.id]
-		row.Text = `  {i}   {def.name}{suffix}`
+		local where = if def.targeting == "self" then "  [di posisimu]" else ""
+		row.Text = `  {i}   {def.name}{where}{suffix}`
 		row.TextColor3 = if remaining > 0 then Color3.fromRGB(120, 120, 120) else Color3.new(1, 1, 1)
 	end
 end
@@ -406,6 +407,17 @@ local function endAim()
 	setMode("returning")
 end
 
+-- Sinyal "self" (tanpa bidikan): langsung dipanggil. Server yang menentukan titik jatuhnya.
+local function callNow(def: Config.Stratagem)
+	local root = getRoot()
+	if not root then
+		return
+	end
+	throwRemote:FireServer(def.id, root.Position)
+	showToast(`RADIO: {def.callLine}`)
+	setMode("idle")
+end
+
 local function selectStratagem(index: number)
 	local def = Config.Stratagems[index]
 	if mode ~= "menu" or not def then
@@ -413,6 +425,10 @@ local function selectStratagem(index: number)
 	end
 	if onCooldown(def.id) then
 		showToast(`{def.name} masih dalam kooldaun`)
+		return
+	end
+	if def.targeting == "self" then
+		callNow(def)
 		return
 	end
 	beginAim(def)
