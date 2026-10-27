@@ -1,6 +1,5 @@
 --!strict
 -- Efek tiap sinyal bantuan. Dipanggil server setelah callDelay; boleh yield.
--- "reinforce" masih placeholder (tiang cahaya), diganti di langkah 5.
 
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -148,31 +147,98 @@ local function ammoCrate(_player: Player, position: Vector3)
 	end)
 end
 
--- Placeholder ---------------------------------------------------------------
+-- Pindai musuh ---------------------------------------------------------------
 
-local function placeholder(id: string): Handler
-	return function(player, position)
-		local def = Config.ById[id]
-		local column = Instance.new("Part")
-		column.Name = `{id}_placeholder`
-		column.Anchored = true
-		column.CanCollide = false
-		column.CanQuery = false
-		column.Material = Enum.Material.Neon
-		column.Color = def.color
-		column.Transparency = 0.4
-		column.Size = Vector3.new(4, 60, 4)
-		column.Position = position + Vector3.new(0, 30, 0)
-		column.Parent = workspace
-		Debris:AddItem(column, 1.5)
-		print(`[{id}] tiba di {position} (dipanggil {player.Name})`)
+local SCAN_DURATION = 15
+local SCAN_INTERVAL = 0.5
+-- Roblox hanya merender ~31 Highlight sekaligus; sisakan satu untuk efek lain.
+local MAX_HIGHLIGHTS = 30
+
+local function scanPulse(position: Vector3, color: Color3, radius: number)
+	local pulse = Instance.new("Part")
+	pulse.Name = "ScanPulse"
+	pulse.Shape = Enum.PartType.Cylinder
+	pulse.Size = Vector3.new(0.3, 4, 4)
+	pulse.CFrame = CFrame.new(position + Vector3.new(0, 0.3, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+	pulse.Anchored = true
+	pulse.CanCollide = false
+	pulse.CanQuery = false
+	pulse.CanTouch = false
+	pulse.Material = Enum.Material.Neon
+	pulse.Color = color
+	pulse.Transparency = 0.3
+	pulse.Parent = workspace
+	TweenService:Create(
+		pulse,
+		TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ Size = Vector3.new(0.3, radius * 2, radius * 2), Transparency = 1 }
+	):Play()
+	Debris:AddItem(pulse, 1.3)
+end
+
+-- Menandai musuh di dekat titik pindai selama SCAN_DURATION; tembus dinding dan terlihat semua pemain.
+local function scan(_player: Player, position: Vector3)
+	local def = Config.ById.scan
+	local radius = def.radius :: number
+	scanPulse(position, def.color, radius)
+
+	local tagged: { [Model]: Highlight } = {}
+	local taggedCount = 0
+	local endTime = os.clock() + SCAN_DURATION
+
+	while os.clock() < endTime do
+		for model, highlight in tagged do
+			local humanoid = model:FindFirstChildOfClass("Humanoid")
+			if not model.Parent or not humanoid or humanoid.Health <= 0 then
+				highlight:Destroy()
+				tagged[model] = nil
+				taggedCount -= 1
+			end
+		end
+
+		local enemies = workspace:FindFirstChild("Enemies")
+		if enemies and taggedCount < MAX_HIGHLIGHTS then
+			for _, model in enemies:GetChildren() do
+				if taggedCount >= MAX_HIGHLIGHTS then
+					break
+				end
+				local root = model:IsA("Model") and model:FindFirstChild("HumanoidRootPart")
+				local humanoid = model:FindFirstChildOfClass("Humanoid")
+				if
+					model:IsA("Model")
+					and not tagged[model]
+					and root
+					and root:IsA("BasePart")
+					and humanoid
+					and humanoid.Health > 0
+					and (root.Position - position).Magnitude <= radius
+				then
+					local highlight = Instance.new("Highlight")
+					highlight.Adornee = model
+					highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+					highlight.FillColor = def.color
+					highlight.FillTransparency = 0.6
+					highlight.OutlineColor = Color3.new(1, 1, 1)
+					highlight.OutlineTransparency = 0
+					highlight.Parent = model
+					tagged[model] = highlight
+					taggedCount += 1
+				end
+			end
+		end
+
+		task.wait(SCAN_INTERVAL)
+	end
+
+	for _, highlight in tagged do
+		highlight:Destroy()
 	end
 end
 
 local Handlers: { [string]: Handler } = {
 	airstrike = orbitalStrike,
 	ammo = ammoCrate,
-	reinforce = placeholder("reinforce"),
+	scan = scan,
 }
 
 return Handlers

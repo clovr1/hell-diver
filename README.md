@@ -8,7 +8,7 @@ Game co-op 4 pemain bertema sci-fi militer serius: terjun ke planet musuh, seles
 - [x] 2. Serangan orbital dan paket logistik
 - [x] 3. Musuh gerombolan (alien dan mesin) dan senapan dasar
 - [ ] 4. Misi dan evakuasi
-- [ ] 5. Mati, bala bantuan, friendly fire
+- [ ] 5. Mati dan hidup kembali (bala bantuan dihapus; mekanisme respawn menyusul)
 
 ## Menjalankan
 
@@ -45,7 +45,7 @@ Nama folder dan script harus sama persis, karena script saling `require` lewat p
 4. Kamera turun lagi dan penanda menyala di sasaran. Beberapa detik kemudian bantuan tiba:
    - **Serangan Orbital**: 12 peluru jatuh dari langit satu per satu (tampak sebagai garis cahaya), tersebar merata di dalam lingkaran merah dan meledak saat mendarat. **Friendly fire aktif**, termasuk untukmu sendiri; tiap ledakan 70 damage di pusat, turun ke 15 di tepi, dan ledakan yang tumpang tindih menumpuk.
    - **Paket Logistik**: peti jatuh dari langit. Tahan E di dekatnya untuk mengisi amunisi (attribute `Ammo` pada Player). Tiap pemain sekali per peti, peti habis setelah 4 pengambilan atau 60 detik.
-   - **Penerjunan Pasukan**: masih tiang cahaya placeholder (langkah 5).
+   - **Pindai Musuh**: gelombang cahaya ungu menyapu area 60 stud. Selama 15 detik, musuh di dalam area ditandai (siluet ungu, tembus dinding) dan terlihat oleh semua pemain. Maksimal 30 musuh ditandai sekaligus.
 
 Game **tidak berhenti** saat kamu membidik: karakter tetap diam di tempat dan musuh tetap menyerang. Cari tempat aman sebelum memanggil.
 

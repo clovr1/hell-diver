@@ -38,12 +38,13 @@ Config.Stratagems = {
 		callLine = "Markas, kirim paket logistik ke titik ini.",
 	},
 	{
-		id = "reinforce",
-		name = "Penerjunan Pasukan",
-		cooldown = 40,
-		callDelay = 4,
-		color = Color3.fromRGB(120, 255, 120),
-		callLine = "Markas, kirim bala bantuan ke titik ini.",
+		id = "scan",
+		name = "Pindai Musuh",
+		cooldown = 30,
+		callDelay = 1.5,
+		color = Color3.fromRGB(190, 120, 255),
+		radius = 60, -- radius pindai
+		callLine = "Markas, pindai area ini. Tandai semua kontak musuh.",
 	},
 } :: { Stratagem }
 
