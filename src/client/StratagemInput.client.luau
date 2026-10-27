@@ -90,7 +90,13 @@ for i, def in Config.Stratagems do
 end
 
 local function render()
-	panel.Visible = open or armed ~= nil
+	local busy = open or armed ~= nil
+	panel.Visible = busy
+	-- Dibaca WeaponInput agar klik pelempar penanda tidak ikut menembak. Ditunda supaya
+	-- baru berubah setelah semua handler klik yang sama selesai.
+	task.defer(function()
+		player:SetAttribute("StratagemBusy", busy)
+	end)
 
 	if armed then
 		status.Text = `SIAP: {armed.name} — klik untuk melempar (X batal)`
