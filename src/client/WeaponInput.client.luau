@@ -48,7 +48,8 @@ local firing = false
 local lastFire = 0
 
 local function isBusy(): boolean
-	return player:GetAttribute("StratagemBusy") == true
+	-- Sibuk dengan radio, atau sedang di lobby (senjata hanya aktif saat misi).
+	return player:GetAttribute("StratagemBusy") == true or player:GetAttribute("InMission") ~= true
 end
 
 UserInputService.InputBegan:Connect(function(input, processed)

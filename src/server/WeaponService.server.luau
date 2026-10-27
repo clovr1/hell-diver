@@ -47,6 +47,9 @@ fireRemote.OnServerEvent:Connect(function(player: Player, origin: unknown, direc
 		return
 	end
 
+	if player:GetAttribute("InMission") ~= true then
+		return -- senjata hanya aktif saat misi, bukan di lobby
+	end
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local root = character and character:FindFirstChild("HumanoidRootPart")

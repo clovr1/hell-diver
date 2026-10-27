@@ -225,7 +225,7 @@ end
 local function render()
 	menu.Visible = mode == "menu"
 	aimBar.Visible = mode == "aiming"
-	radioButton.Visible = mode == "idle" or mode == "menu"
+	radioButton.Visible = (mode == "idle" or mode == "menu") and player:GetAttribute("InMission") == true
 	local def = selected
 	if def then
 		aimTitle.Text = `BIDIK: {def.name}`
@@ -370,6 +370,10 @@ local function restoreCamera()
 end
 
 local function openMenu()
+	if player:GetAttribute("InMission") ~= true then
+		showToast("Radio hanya aktif saat misi")
+		return
+	end
 	if mode == "idle" and getRoot() then
 		setMode("menu")
 	end
@@ -568,6 +572,8 @@ resultRemote.OnClientEvent:Connect(function(id: string, ok: boolean, serverReady
 	end
 	refreshRows()
 end)
+
+player:GetAttributeChangedSignal("InMission"):Connect(render)
 
 player.CharacterRemoving:Connect(function()
 	if mode ~= "idle" then

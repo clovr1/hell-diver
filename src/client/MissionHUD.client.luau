@@ -1,5 +1,5 @@
 --!strict
--- Teks tujuan di atas layar + penanda jarak di atas tiap sasaran misi (menara, titik evakuasi).
+-- Teks tujuan di atas layar (lobby, hitung mundur, terjun, misi) + penanda jarak di atas sasaran misi.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -11,6 +11,7 @@ local objects = workspace:WaitForChild("MissionObjects")
 local PANEL_COLOR = Color3.fromRGB(15, 18, 24)
 local PENDING_COLOR = Color3.fromRGB(255, 90, 90)
 local DONE_COLOR = Color3.fromRGB(90, 255, 130)
+local DEFAULT_MARKER_OFFSET = 8 -- stud di atas pusat Part, kalau server tidak mengatur MarkerOffset
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "MissionUI"
@@ -22,7 +23,7 @@ gui.Parent = player:WaitForChild("PlayerGui")
 local panel = Instance.new("Frame")
 panel.AnchorPoint = Vector2.new(0.5, 0)
 panel.Position = UDim2.new(0.5, 0, 0, 16)
-panel.Size = UDim2.fromOffset(420, 70)
+panel.Size = UDim2.fromOffset(460, 70)
 panel.BackgroundColor3 = PANEL_COLOR
 panel.BackgroundTransparency = 0.25
 panel.BorderSizePixel = 0
@@ -63,34 +64,68 @@ barFill.BackgroundColor3 = DONE_COLOR
 barFill.BorderSizePixel = 0
 barFill.Parent = barBack
 
+local function inMission(): boolean
+	return player:GetAttribute("InMission") == true
+end
+
 local function render()
 	local phase = state:GetAttribute("Phase")
 	local active = state:GetAttribute("TowersActive")
 	local total = state:GetAttribute("TowersTotal")
 	local progress = state:GetAttribute("EvacProgress")
+	local countdownEnd = state:GetAttribute("CountdownEnd")
 
-	panel.Visible = phase == "towers" or phase == "evac" or phase == "success"
-	barBack.Visible = phase == "evac"
+	panel.Visible = true
+	barBack.Visible = false
 
-	if phase == "towers" then
+	if phase == "lobby" then
+		title.Text = "LOBBY"
+		subtitle.Text = "Naik ke dropship, lalu tekan E di konsol untuk memulai penerjunan."
+	elseif phase == "countdown" then
+		local remaining = if typeof(countdownEnd) == "number"
+			then math.max(0, math.ceil(countdownEnd - workspace:GetServerTimeNow()))
+			else 0
+		title.Text = "PENERJUNAN DIMULAI"
+		subtitle.Text = `Naik ke dropship! Berangkat dalam {remaining} detik.`
+	elseif not inMission() then
+		title.Text = "MISI SEDANG BERLANGSUNG"
+		subtitle.Text = "Tunggu di lobby sampai misi selesai."
+	elseif phase == "drop" then
+		title.Text = "MENERJUN KE PLANET"
+		subtitle.Text = "Bersiap mendarat..."
+	elseif phase == "towers" then
 		title.Text = "MISI: NYALAKAN MENARA RADIO"
 		subtitle.Text = `{active}/{total} menara aktif. Tahan E di dekat menara.`
 	elseif phase == "evac" then
 		title.Text = "KABUR KE TITIK EVAKUASI"
 		subtitle.Text = "Semua pemain yang hidup harus berada di dalam lingkaran."
+		barBack.Visible = true
 		barFill.Size = UDim2.fromScale(if typeof(progress) == "number" then progress else 0, 1)
 	elseif phase == "success" then
 		title.Text = "MISI SELESAI"
-		subtitle.Text = "Misi berikutnya segera dimulai."
+		subtitle.Text = "Kembali ke lobby sebentar lagi."
+	else
+		panel.Visible = false
 	end
 end
 
 state.AttributeChanged:Connect(render)
+player:GetAttributeChangedSignal("InMission"):Connect(render)
 render()
+
+-- Hitung mundur di panel.
+task.spawn(function()
+	while true do
+		task.wait(0.25)
+		if state:GetAttribute("Phase") == "countdown" then
+			render()
+		end
+	end
+end)
 
 -- Penanda sasaran -----------------------------------------------------------------
 
-type Marker = { label: TextLabel, part: BasePart }
+type Marker = { label: TextLabel, billboard: BillboardGui }
 local markers: { [BasePart]: Marker } = {}
 
 local function addMarker(part: BasePart)
@@ -98,12 +133,13 @@ local function addMarker(part: BasePart)
 	if typeof(name) ~= "string" or markers[part] then
 		return
 	end
+	local offset = part:GetAttribute("MarkerOffset")
 
 	local billboard = Instance.new("BillboardGui")
 	billboard.Adornee = part
 	billboard.AlwaysOnTop = true
 	billboard.Size = UDim2.fromOffset(180, 44)
-	billboard.StudsOffsetWorldSpace = Vector3.new(0, if part.Size.Y > 5 then 24 else 12, 0)
+	billboard.StudsOffsetWorldSpace = Vector3.new(0, if typeof(offset) == "number" then offset else DEFAULT_MARKER_OFFSET, 0)
 	billboard.Parent = gui
 
 	local label = Instance.new("TextLabel")
@@ -115,7 +151,7 @@ local function addMarker(part: BasePart)
 	label.TextStrokeTransparency = 0.4
 	label.Parent = billboard
 
-	markers[part] = { label = label, part = part }
+	markers[part] = { label = label, billboard = billboard }
 	-- Server menghapus Part (ronde baru): bersihkan penandanya.
 	part.AncestryChanged:Connect(function()
 		if not part:IsDescendantOf(workspace) then
@@ -150,9 +186,11 @@ task.spawn(function()
 		task.wait(0.2)
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
+		local visible = inMission()
 		for part, marker in markers do
 			local name = part:GetAttribute("ObjectiveName")
 			local done = part:GetAttribute("ObjectiveDone") == true
+			marker.billboard.Enabled = visible -- yang masih di lobby tidak perlu melihat penanda misi
 			if typeof(name) == "string" then
 				local distance = if root and root:IsA("BasePart") then (part.Position - root.Position).Magnitude else 0
 				marker.label.Text = if done then `{name} ✓` else `{name}\n{math.floor(distance)} m`

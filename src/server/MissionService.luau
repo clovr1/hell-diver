@@ -1,7 +1,8 @@
 --!strict
--- Alur misi: menunggu pemain -> nyalakan menara (tahan E) -> evakuasi -> selesai -> ronde baru.
--- Status disiarkan lewat attribute di ReplicatedStorage.MissionState; penanda sasaran ada di
--- workspace.MissionObjects (client memasang label jarak untuk tiap Part ber-attribute ObjectiveName).
+-- Satu ronde misi: menara -> evakuasi -> selesai. Dipanggil GameFlow setelah pemain mendarat.
+-- Hanya pemain ber-attribute InMission yang dihitung. Status disiarkan lewat attribute di
+-- ReplicatedStorage.MissionState; penanda sasaran ada di workspace.MissionObjects (client memasang
+-- label jarak untuk tiap Part ber-attribute ObjectiveName).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,10 +13,11 @@ local TICK = 0.25
 
 local state = Instance.new("Folder")
 state.Name = "MissionState"
-state:SetAttribute("Phase", "waiting") -- waiting | towers | evac | success
+state:SetAttribute("Phase", "lobby") -- lobby | countdown | drop | towers | evac | success
 state:SetAttribute("TowersActive", 0)
 state:SetAttribute("TowersTotal", #Config.towerOffsets)
 state:SetAttribute("EvacProgress", 0)
+state:SetAttribute("CountdownEnd", 0)
 state.Parent = ReplicatedStorage
 
 local objects = Instance.new("Folder")
@@ -24,11 +26,28 @@ objects.Parent = workspace
 
 type Points = { towers: { Vector3 }, evac: Vector3 }
 
+local MissionService = {}
+MissionService.state = state
+
+function MissionService.setPhase(phase: string)
+	state:SetAttribute("Phase", phase)
+end
+
 -- Pemain ----------------------------------------------------------------------
+
+local function missionPlayers(): { Player }
+	local list: { Player } = {}
+	for _, player in Players:GetPlayers() do
+		if player:GetAttribute("InMission") == true then
+			table.insert(list, player)
+		end
+	end
+	return list
+end
 
 local function aliveRoots(): { BasePart }
 	local roots: { BasePart } = {}
-	for _, player in Players:GetPlayers() do
+	for _, player in missionPlayers() do
 		local character = player.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -41,7 +60,7 @@ end
 
 -- Titik misi ------------------------------------------------------------------
 
-local function groundAt(x: number, z: number, fallbackY: number): Vector3
+function MissionService.groundAt(x: number, z: number, fallbackY: number): Vector3
 	local filter: { Instance } = { objects }
 	for _, player in Players:GetPlayers() do
 		if player.Character then
@@ -56,6 +75,10 @@ local function groundAt(x: number, z: number, fallbackY: number): Vector3
 	if markers then
 		table.insert(filter, markers)
 	end
+	local lobby = workspace:FindFirstChild("Lobby")
+	if lobby then
+		table.insert(filter, lobby)
+	end
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = filter
@@ -64,9 +87,7 @@ local function groundAt(x: number, z: number, fallbackY: number): Vector3
 	return if hit then hit.Position else Vector3.new(x, fallbackY, z)
 end
 
-local function resolvePoints(): Points
-	local spawn = workspace:FindFirstChildWhichIsA("SpawnLocation", true)
-	local center = if spawn then spawn.Position else Vector3.zero
+local function resolvePoints(center: Vector3): Points
 	local baseY = center.Y
 
 	local markers = workspace:FindFirstChild("MissionPoints")
@@ -77,22 +98,25 @@ local function resolvePoints(): Points
 			if not part or not part:IsA("BasePart") then
 				break
 			end
-			table.insert(towers, groundAt(part.Position.X, part.Position.Z, baseY))
+			table.insert(towers, MissionService.groundAt(part.Position.X, part.Position.Z, baseY))
 		end
 		local evacPart = markers:FindFirstChild("Evac")
 		if #towers > 0 and evacPart and evacPart:IsA("BasePart") then
-			return { towers = towers, evac = groundAt(evacPart.Position.X, evacPart.Position.Z, baseY) }
+			return {
+				towers = towers,
+				evac = MissionService.groundAt(evacPart.Position.X, evacPart.Position.Z, baseY),
+			}
 		end
 		warn("MissionPoints ada, tapi butuh Tower1..N dan Evac; memakai posisi default.")
 	end
 
 	local towers: { Vector3 } = {}
 	for _, offset in Config.towerOffsets do
-		table.insert(towers, groundAt(center.X + offset.X, center.Z + offset.Z, baseY))
+		table.insert(towers, MissionService.groundAt(center.X + offset.X, center.Z + offset.Z, baseY))
 	end
 	return {
 		towers = towers,
-		evac = groundAt(center.X + Config.evacOffset.X, center.Z + Config.evacOffset.Z, baseY),
+		evac = MissionService.groundAt(center.X + Config.evacOffset.X, center.Z + Config.evacOffset.Z, baseY),
 	}
 end
 
@@ -113,12 +137,17 @@ local function makePart(size: Vector3, color: Color3, material: Enum.Material, c
 end
 
 -- Menara: tiang + lampu. Prompt "tahan E" di tiang; menahan dibatalkan otomatis kalau pemain menjauh.
-local function createTower(index: number, position: Vector3, onActivated: () -> ()): ()
-	local pillar =
-		makePart(Vector3.new(3, 28, 3), Color3.fromRGB(70, 75, 85), Enum.Material.Metal, CFrame.new(position + Vector3.new(0, 14, 0)))
+local function createTower(index: number, position: Vector3, onActivated: () -> ())
+	local pillar = makePart(
+		Vector3.new(3, 28, 3),
+		Color3.fromRGB(70, 75, 85),
+		Enum.Material.Metal,
+		CFrame.new(position + Vector3.new(0, 14, 0))
+	)
 	pillar.Name = `Tower{index}`
 	pillar:SetAttribute("ObjectiveName", `Menara Radio {index}`)
 	pillar:SetAttribute("ObjectiveDone", false)
+	pillar:SetAttribute("MarkerOffset", -6) -- label sekitar 8 stud di atas tanah (pusat tiang di 14)
 
 	local lamp = makePart(
 		Vector3.new(5, 5, 5),
@@ -139,8 +168,8 @@ local function createTower(index: number, position: Vector3, onActivated: () -> 
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = pillar
 
-	prompt.Triggered:Connect(function()
-		if not prompt.Enabled then
+	prompt.Triggered:Connect(function(who)
+		if not prompt.Enabled or who:GetAttribute("InMission") ~= true then
 			return
 		end
 		prompt.Enabled = false
@@ -176,9 +205,14 @@ local function createEvac(position: Vector3): Part
 	ring.CanQuery = false
 	ring:SetAttribute("ObjectiveName", "Titik Evakuasi")
 	ring:SetAttribute("ObjectiveDone", false)
+	ring:SetAttribute("MarkerOffset", 8)
 
-	local beam =
-		makePart(Vector3.new(2, 150, 2), ACTIVE_COLOR, Enum.Material.Neon, CFrame.new(position + Vector3.new(0, 75, 0)))
+	local beam = makePart(
+		Vector3.new(2, 150, 2),
+		ACTIVE_COLOR,
+		Enum.Material.Neon,
+		CFrame.new(position + Vector3.new(0, 75, 0))
+	)
 	beam.Name = "EvacBeam"
 	beam.Transparency = 0.5
 	beam.CanCollide = false
@@ -186,23 +220,16 @@ local function createEvac(position: Vector3): Part
 	return ring
 end
 
--- Alur ronde ------------------------------------------------------------------
+-- Ronde -----------------------------------------------------------------------
 
-local function setPhase(phase: string)
-	state:SetAttribute("Phase", phase)
-end
-
-local function runRound()
-	setPhase("waiting")
+-- center: titik pendaratan (permukaan tanah). Mengembalikan true kalau berhasil,
+-- false kalau dibatalkan karena semua peserta keluar dari game.
+function MissionService.run(center: Vector3): boolean
 	state:SetAttribute("TowersActive", 0)
 	state:SetAttribute("EvacProgress", 0)
-	while #aliveRoots() == 0 do
-		task.wait(1)
-	end
 	task.wait(Config.startDelay)
 
-	-- Menara
-	local points = resolvePoints()
+	local points = resolvePoints(center)
 	local total = #points.towers
 	local active = 0
 	state:SetAttribute("TowersTotal", total)
@@ -212,18 +239,27 @@ local function runRound()
 			state:SetAttribute("TowersActive", active)
 		end)
 	end
-	setPhase("towers")
+	MissionService.setPhase("towers")
+
 	while active < total do
 		task.wait(TICK)
+		if #missionPlayers() == 0 then
+			objects:ClearAllChildren()
+			return false
+		end
 	end
 
 	-- Evakuasi: semua pemain hidup harus berada di lingkaran selama evacHoldSeconds berturut-turut.
 	-- Kalau ada yang keluar, progres turun pelan (separuh kecepatan naik) supaya tidak langsung hangus.
 	local ring = createEvac(points.evac)
-	setPhase("evac")
+	MissionService.setPhase("evac")
 	local progress = 0
 	while progress < 1 do
 		task.wait(TICK)
+		if #missionPlayers() == 0 then
+			objects:ClearAllChildren()
+			return false
+		end
 		local roots = aliveRoots()
 		local inside = 0
 		for _, root in roots do
@@ -241,13 +277,10 @@ local function runRound()
 	end
 	ring:SetAttribute("ObjectiveDone", true)
 
-	setPhase("success")
+	MissionService.setPhase("success")
 	task.wait(Config.resetDelay)
 	objects:ClearAllChildren()
+	return true
 end
 
-task.spawn(function()
-	while true do
-		runRound()
-	end
-end)
+return MissionService

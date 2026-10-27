@@ -8,7 +8,8 @@ Game co-op 4 pemain bertema sci-fi militer serius: terjun ke planet musuh, seles
 - [x] 2. Serangan orbital dan paket logistik
 - [x] 3. Musuh gerombolan (alien dan mesin) dan senapan dasar
 - [x] 4. Misi menara radio dan titik evakuasi
-- [ ] 5. Mati dan hidup kembali (bala bantuan dihapus; mekanisme respawn menyusul)
+- [x] 4b. Lobby, dropship, dan animasi terjun ke planet
+- [ ] 5. Mati dan hidup kembali (bala bantuan dihapus; sementara respawn di titik pendaratan)
 
 ## Menjalankan
 
@@ -35,7 +36,11 @@ Buka Roblox Studio, buat place kosong (Baseplate), lalu sambungkan lewat plugin 
 | `src/server/WeaponService.server.luau` | Script, nama `WeaponService` | `ServerScriptService` > `Server` |
 | `src/client/WeaponInput.client.luau` | LocalScript, nama `WeaponInput` | `StarterPlayer` > `StarterPlayerScripts` > `Client` |
 | `src/shared/MissionConfig.luau` | ModuleScript, nama `MissionConfig` | `ReplicatedStorage` > `Shared` |
-| `src/server/MissionService.server.luau` | Script, nama `MissionService` | `ServerScriptService` > `Server` |
+| `src/shared/LobbyConfig.luau` | ModuleScript, nama `LobbyConfig` | `ReplicatedStorage` > `Shared` |
+| `src/server/Lobby.luau` | ModuleScript, nama `Lobby` | `ServerScriptService` > `Server` |
+| `src/server/MissionService.luau` | ModuleScript, nama `MissionService` | `ServerScriptService` > `Server` |
+| `src/server/GameFlow.server.luau` | Script, nama `GameFlow` | `ServerScriptService` > `Server` |
+| `src/client/FlowEffects.client.luau` | LocalScript, nama `FlowEffects` | `StarterPlayer` > `StarterPlayerScripts` > `Client` |
 | `src/client/MissionHUD.client.luau` | LocalScript, nama `MissionHUD` | `StarterPlayer` > `StarterPlayerScripts` > `Client` |
 
 Nama folder dan script harus sama persis, karena script saling `require` lewat path itu.
@@ -54,16 +59,21 @@ Game **tidak berhenti** saat kamu membidik: karakter tetap diam di tempat dan mu
 
 Nama, kooldaun, warna, dan ucapan radio ada di `src/shared/StratagemConfig.luau`.
 
-## Misi: Menara Radio
+## Alur permainan: lobby, terjun, misi
 
-1. Sekitar 8 detik setelah ada pemain hidup, 3 menara muncul di map (tiang dengan lampu merah). Penanda nama dan jarak tampil di atas tiap menara, tembus dinding.
-2. Tahan **E** di dekat menara selama 6 detik untuk menyalakannya (lampu jadi hijau dan ada pilar cahaya). Kalau menjauh atau melepas E, tahanan batal.
-3. Setelah ketiganya menyala, muncul **titik evakuasi** (lingkaran hijau). **Semua pemain yang hidup** harus berada di dalam lingkaran 5 detik berturut-turut. Kalau ada yang keluar, progres turun pelan.
-4. Misi selesai. Setelah 12 detik, ronde baru dimulai dengan menara baru.
+1. Semua pemain muncul di **lobby**: platform melayang di orbit (jauh di samping dan di atas map) dengan sebuah **dropship**.
+2. Naik ke dropship (masuk lewat pintu belakang), lalu salah satu pemain menekan **E** di **konsol** dekat hidung pesawat. Hitung mundur 8 detik dimulai; yang masih di dalam dropship saat hitungan habis ikut berangkat, yang di luar tetap di lobby.
+3. Dropship bergetar, layar memutih, lalu tiap pemain terjun dalam kapsul dari ketinggian ke titik pendaratan di planet (6 detik, makin cepat), disertai getar saat mendarat.
+4. **Misi Menara Radio** dimulai:
+   - 3 menara muncul (tiang dengan lampu merah). Tahan **E** di dekat menara 6 detik untuk menyalakannya; penanda nama dan jarak tampil di atas tiap menara.
+   - Setelah ketiganya menyala, muncul **titik evakuasi** (lingkaran hijau). **Semua peserta yang hidup** harus berada di dalamnya 5 detik berturut-turut. Kalau ada yang keluar, progres turun pelan.
+5. Setelah **MISI SELESAI**, semua kembali ke lobby (layar memutih) dengan HP dan amunisi terisi penuh, dan bisa berangkat lagi.
 
-Posisi default dihitung dari `SpawnLocation`. Untuk map sendiri, buat folder `MissionPoints` di Workspace berisi Part bernama `Tower1`, `Tower2`, ... dan `Evac`; posisi Part itu dipakai (Part boleh dibuat transparan atau digeser ke bawah tanah). Angka-angkanya ada di `MissionConfig.luau`.
+Senjata dan radio bantuan **hanya aktif saat misi**. Pemain yang mati saat misi muncul lagi di titik pendaratan. Pemain yang masuk saat misi berlangsung menunggu di lobby sampai ronde berikutnya.
 
-Belum ada: musuh yang menyerang saat menara dinyalakan atau saat evakuasi (gelombang musuh sedang dimatikan), kondisi gagal, dan hukuman kalau semua pemain mati.
+Posisi menara dan evakuasi dihitung dari `SpawnLocation` map (spawn milik lobby diabaikan). Untuk map sendiri, buat folder `MissionPoints` di Workspace berisi Part bernama `Tower1`, `Tower2`, ... dan `Evac`; posisi Part itu dipakai. Lobby dan dropship dibuat dari Part saat server mulai (`Lobby.luau`, ukuran dan waktu di `LobbyConfig.luau`), jadi nanti bisa diganti model buatan sendiri. Angka misi ada di `MissionConfig.luau`.
+
+Belum ada: musuh yang menyerang saat misi (gelombang sedang dimatikan), kondisi gagal, dan hukuman kalau semua pemain mati.
 
 ## Senjata dan musuh
 

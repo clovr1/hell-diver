@@ -101,8 +101,8 @@ throwRemote.OnServerEvent:Connect(function(player: Player, id: unknown, position
 	end
 	local def = Config.ById[id]
 	local cooldowns = readyAt[player]
-	if not def or not cooldowns then
-		return
+	if not def or not cooldowns or player:GetAttribute("InMission") ~= true then
+		return -- bantuan hanya aktif saat misi, bukan di lobby
 	end
 	-- NaN/inf lolos typeof; tolak.
 	if position ~= position or position.Magnitude == math.huge then
